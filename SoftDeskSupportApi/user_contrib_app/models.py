@@ -8,3 +8,4 @@ class CustomUser(AbstractUser):
     can_data_be_shared = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now_add=True)
 
+    REQUIRED_FIELDS = ['age']
