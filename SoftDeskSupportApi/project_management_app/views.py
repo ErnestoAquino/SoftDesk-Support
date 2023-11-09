@@ -11,6 +11,20 @@ from project_management_app.serializers import CommentListSerializer
 from project_management_app.serializers import CommentDetailSerializer
 
 
+class BaseViewSet(ModelViewSet):
+    detail_serializer_class = None
+
+    def get_serializer_class(self):
+        """
+        Use `detail_serializer_class` for 'retrieve' action or default to
+        `serializer_class` for other actions.
+        """
+        if self.action == "retrieve" and self.detail_serializer_class is not None:
+            return self.detail_serializer_class
+        else:
+            return super().get_serializer_class()
+
+
 class ProjectViewSet(ModelViewSet):
     serializer_class = ProjectListSerializer
     detail_serializer_class = ProjectDetailSerializer
@@ -39,15 +53,9 @@ class IssueViewSet(ModelViewSet):
             return super().get_serializer_class()
 
 
-class CommentViewSet(ModelViewSet):
+class CommentViewSet(BaseViewSet):
     serializer_class = CommentListSerializer
     detail_serializer_class = CommentDetailSerializer
 
     def get_queryset(self):
         return Comment.objects.all()
-
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return self.detail_serializer_class
-        else:
-            return super().get_serializer_class()
