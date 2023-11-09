@@ -18,25 +18,28 @@ class AuthorSerializerMixin(serializers.Serializer):
 
 
 class ProjectListSerializer(ModelSerializer):
-
     class Meta:
         model = Project
         fields = ["id", "name", "description"]
 
 
 class ProjectDetailSerializer(AuthorSerializerMixin, ModelSerializer):
-
-    contributors = CustomUserSerializer(many=True)
+    contributors = CustomUserSerializer(many = True)
 
     class Meta:
         model = Project
         fields = ("id", "name", "description", "type", "created_time", "author", "contributors")
 
 
-class IssueSerializer(AuthorSerializerMixin, ModelSerializer):
+class IssueListSerializer(ModelSerializer):
+    class Meta:
+        model = Issue
+        fields = ["id", "title", "description", "status", "priority", "tag"]
 
+
+class IssueDetailSerializer(AuthorSerializerMixin, ModelSerializer):
     # author = serializers.SerializerMethodField()
-    project = ProjectDetailSerializer(read_only=True)
+    project = ProjectDetailSerializer(read_only = True)
 
     class Meta:
         model = Issue
@@ -50,17 +53,16 @@ class IssueSerializer(AuthorSerializerMixin, ModelSerializer):
     #         return {}
 
 
-class CommentSerializer(AuthorSerializerMixin, ModelSerializer):
-    # author = serializers.SerializerMethodField()
-    issue = IssueSerializer()
+class CommentDetailSerializer(AuthorSerializerMixin, ModelSerializer):
+    issue = IssueDetailSerializer()
 
     class Meta:
         model = Comment
         fields = ["id", "description", "author", "issue"]
 
-    # def get_author(self, instance):
-    #     if instance.author.can_data_be_shared:
-    #         serializer = CustomUserSerializer(instance.author)
-    #         return serializer.data
-    #     else:
-    #         return {}
+
+class CommentListSerializer(ModelSerializer):
+
+    class Meta:
+        model = Comment
+        fields = ["id", "description"]
