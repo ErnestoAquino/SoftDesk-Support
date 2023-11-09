@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import CustomUser
+from .models import Contributor
 
 
 # Registering CustomUser for Django admin interface.
@@ -13,3 +14,9 @@ class CustomUserAdmin(admin.ModelAdmin):
 
     # Adding a search bar to search users by their 'username'.
     search_fields = ('username',)
+
+
+@admin.register(Contributor)
+class ContributorAdmin(admin.ModelAdmin):
+    # Columns to be displayed in the contributor listing
+    list_display = ('user', 'project')
