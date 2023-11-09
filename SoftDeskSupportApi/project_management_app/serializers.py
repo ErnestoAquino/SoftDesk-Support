@@ -17,7 +17,14 @@ class AuthorSerializerMixin(serializers.Serializer):
             return {}
 
 
-class ProjectSerializer(AuthorSerializerMixin, ModelSerializer):
+class ProjectListSerializer(ModelSerializer):
+
+    class Meta:
+        model = Project
+        fields = ["id", "name", "description"]
+
+
+class ProjectDetailSerializer(AuthorSerializerMixin, ModelSerializer):
 
     contributors = CustomUserSerializer(many=True)
 
@@ -29,7 +36,7 @@ class ProjectSerializer(AuthorSerializerMixin, ModelSerializer):
 class IssueSerializer(AuthorSerializerMixin, ModelSerializer):
 
     # author = serializers.SerializerMethodField()
-    project = ProjectSerializer()
+    project = ProjectDetailSerializer(read_only=True)
 
     class Meta:
         model = Issue
