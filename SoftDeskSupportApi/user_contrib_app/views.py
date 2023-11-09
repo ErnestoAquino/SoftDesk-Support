@@ -4,7 +4,9 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 
 from user_contrib_app.models import CustomUser
+from user_contrib_app.models import Contributor
 from user_contrib_app.serializers import CustomUserSerializer
+from user_contrib_app.serializers import ContributorSerializer
 
 
 class CustomUsersViewset(ModelViewSet):
@@ -28,3 +30,10 @@ class CustomUsersViewset(ModelViewSet):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status = status.HTTP_201_CREATED, headers = headers)
+
+
+class ContributorViewset(ModelViewSet):
+    serializer_class = ContributorSerializer
+
+    def get_queryset(self):
+        return Contributor.objects.all()
