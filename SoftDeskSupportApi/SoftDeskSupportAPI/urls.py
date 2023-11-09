@@ -20,10 +20,18 @@ from django.urls import include
 from rest_framework import routers
 
 from user_contrib_app.views import CustomUsersViewset
+from user_contrib_app.views import ContributorViewset
+from project_management_app.views import ProjectViewSet
+from project_management_app.views import IssueViewSet
+from project_management_app.views import CommentViewSet
 
 router = routers.SimpleRouter()
 
 router.register("users", CustomUsersViewset, basename="users")
+router.register('contributors', ContributorViewset, basename="contributors")
+router.register("projects", ProjectViewSet, basename="projects")
+router.register("issues", IssueViewSet, basename="issues")
+router.register("comments", CommentViewSet, basename="comments")
 
 
 urlpatterns = [
