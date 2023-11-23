@@ -1,5 +1,6 @@
 from rest_framework.relations import HyperlinkedRelatedField
 from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import HyperlinkedIdentityField
 from rest_framework import serializers
 from project_management_app.models import Project
 from project_management_app.models import Issue
@@ -19,9 +20,11 @@ class AuthorSerializerMixin(serializers.Serializer):
 
 
 class ProjectListSerializer(ModelSerializer):
+    url = HyperlinkedIdentityField(view_name="projects-detail", read_only = True)
+
     class Meta:
         model = Project
-        fields = ["id", "name", "description", "type"]
+        fields = ["url", "name", "description", "type"]
 
 
 class ProjectDetailSerializer(AuthorSerializerMixin, ModelSerializer):
