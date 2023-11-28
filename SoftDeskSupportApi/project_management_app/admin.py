@@ -7,7 +7,7 @@ from project_management_app.models import Comment
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     # Columns to be displayed in the project listing.
-    list_display = ('name', 'type', 'author', 'created_time')
+    list_display = ('id', 'name', 'type', 'author', 'created_time')
 
 
 @admin.register(Issue)
