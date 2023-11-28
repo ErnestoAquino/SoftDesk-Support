@@ -1,15 +1,22 @@
+import re
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 # from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 
 from user_contrib_app.permissions import UserProfilePermission
+from user_contrib_app.permissions import IsProjectAuthor
+from user_contrib_app.permissions import IsProjectAuthorTest
+from user_contrib_app.permissions import IsProjectAuthorForDelete
 from user_contrib_app.models import CustomUser
 from user_contrib_app.models import Contributor
 from user_contrib_app.serializers import CustomUserSerializer
 from user_contrib_app.serializers import ContributorSerializer
+from project_management_app.models import Project
 
 
 class CustomUsersViewset(ModelViewSet):
@@ -49,6 +56,37 @@ class CustomUsersViewset(ModelViewSet):
 
 class ContributorViewset(ModelViewSet):
     serializer_class = ContributorSerializer
+    queryset = Contributor.objects.all()
+    # http_method_names = ['post', 'head', 'options', 'delete']
+    # permission_classes = [IsAuthenticated, IsProjectAuthorTest, IsProjectAuthorForDelete]
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return Contributor.objects.all()
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        project_url = request.query_params.get('project_url')
+        username = request.query_params.get('username')
+
+        project_id = self.extract_project_id(project_url)
+
+        project = get_object_or_404(Project, id = project_id)
+        user = get_object_or_404(CustomUser, username=username)
+
+        contributor = get_object_or_404(Contributor, user=user, project=project)
+        contributor.delete()
+
+        return Response(status = status.HTTP_204_NO_CONTENT)
+
+    def extract_project_id(self, url):
+        # regular expression to extract the project ID from the URL.
+        match = re.search(r'api/projects/(\d+)/$', url)
+        if match:
+            # Extract the project ID from the URL.
+            return match.group(1)
+        else:
+            # If a valid ID is not found in the URL, raise an exception.
+            raise PermissionDenied("Invalid project URL.")
