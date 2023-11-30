@@ -42,5 +42,11 @@ urlpatterns = [
     path("api-auth/", include('rest_framework.urls')),
     path("api/token/", TokenObtainPairView.as_view()),
     path("api/token/refresh/", TokenRefreshView.as_view()),
-    path("api/", include(router.urls))
+    path("api/", include(router.urls)),
+    path("api/projects/<int:project_pk>/issues/",
+         IssueViewSet.as_view({"get": "list", "post": "create"}),
+         name="issue-list"),
+    path("api/projects/<int:project_pk>/issues/<int:pk>/",
+         IssueViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
+         name="issue-detail"),
 ]
