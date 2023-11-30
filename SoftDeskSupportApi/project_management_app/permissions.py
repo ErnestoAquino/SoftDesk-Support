@@ -1,6 +1,7 @@
 from rest_framework.permissions import BasePermission
 
 from project_management_app.exceptions import CustomAPIException
+from project_management_app.models import Project
 
 
 class IsAuthor(BasePermission):
@@ -24,3 +25,21 @@ class IsContributor(BasePermission):
             return True
 
         raise CustomAPIException("You need to be a contributor or the author to access this project.")
+
+
+class HasProjectAccessPermission (BasePermission):
+
+    def has_permission(self, request, view):
+        # Retrieve the project_pk from the URL
+        project_pk = view.kwargs['project_pk']
+
+        # Obtain the project using project_pk
+        try:
+            project = Project.objects.get(pk=project_pk)
+        except Project.DoesNotExist:
+            return False
+
+        # Check if the current user is the author of the project or a contributor
+        return request.user == project.author or request.user in project.contributors.all()
+
+
