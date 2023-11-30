@@ -38,7 +38,16 @@ class ProjectDetailSerializer(AuthorSerializerMixin, ModelSerializer):
 class IssueListSerializer(ModelSerializer):
     class Meta:
         model = Issue
-        fields = ["id", "title", "description", "status", "priority", "tag"]
+        fields = ["id", "title", "description", "status", "priority", "tag", "assignee"]
+
+    def validate_assignee(self, value):
+        # Retrieve the project from the context
+        project = self.context.get("project")
+
+        # Check if the assignee is a contributor of the project
+        if value and value not in project.contributors.all():
+            raise serializers.ValidationError("The assigned user must be a contributor of the project.")
+        return value
 
 
 class IssueDetailSerializer(AuthorSerializerMixin, ModelSerializer):
