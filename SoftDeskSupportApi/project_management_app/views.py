@@ -1,3 +1,5 @@
+from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -5,6 +7,7 @@ from rest_framework import status
 
 from project_management_app.permissions import IsAuthor
 from project_management_app.permissions import IsContributor
+from project_management_app.permissions import HasProjectAccessPermission
 from project_management_app.models import Project
 from project_management_app.models import Issue
 from project_management_app.models import Comment
@@ -65,18 +68,30 @@ class ProjectViewSet(ModelViewSet):
 class IssueViewSet(ModelViewSet):
     serializer_class = IssueListSerializer
     detail_serializer_class = IssueDetailSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasProjectAccessPermission]
 
     def get_queryset(self):
-        if self.action == 'list':
-            return Issue.objects.filter(project__contributors = self.request.user)
-        return Issue.objects.all()
+        project_pk = self.kwargs['project_pk']
+        return Issue.objects.filter(project_id = project_pk)
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return self.detail_serializer_class
         else:
             return super().get_serializer_class()
+
+    def create(self, request, *args, **kwargs):
+        project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
+
+        # Only the author or contributors of the project can create issues
+        if request.user != project.author and request.user not in project.contributors.all():
+            raise PermissionDenied("Only the author or contributors can create issues.")
+
+        serializer = self.get_serializer(data=request.data, context = {'project': project})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(project=project, author=request.user)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CommentViewSet(BaseViewSet):
