@@ -12,14 +12,11 @@ build/
 # PyCharm directories
 .idea/
 
-# Pipenv
-Pipfile.lock
-
 # Logs and databases
 *.log
 *.sql
 *.sqlite
-SoftDeskSupportAPI/db.sqlite3
+
 
 # OS generated files
 .DS_Store
