@@ -9,15 +9,22 @@ from project_management_app.models import Project
 
 class UserProfilePermission(BasePermission):
     """
-    Custom permission object that only allows users to edit their own data.
+    Custom permission object that restricts users to only accessing and modifying their own profile data.
+
+    This permission ensures that a user can perform read operations (GET, HEAD, OPTIONS) only on their own
+    profile and restricts write operations (POST, PUT, PATCH, DELETE) to their own profile as well.
     """
     def has_object_permission(self, request, view, obj):
-        # Reading is allowed for any request,
-        # thus GET, HEAD, or OPTIONS requests are allowed.
+        # Check if the request method is one of the safe methods (GET, HEAD, OPTIONS).
+        # Safe methods are read operations that do not alter data.
         if request.method in SAFE_METHODS:
+            # If the user making the request is not the same as the object (profile), deny access.
+            if obj != request.user:
+                raise PermissionDenied("You cannot access a profile that is not your own.")
             return True
 
-        # Writing is only allowed if the user making the request is the same as the object.
+        # For write operations (POST, PUT, PATCH, DELETE), ensure that the user making the request
+        # is the same as the object (profile). If not, deny the appropriate operation with a custom message.
         if obj != request.user:
             if request.method == "DELETE":
                 raise PermissionDenied("You cannot delete a user who is not you.")
