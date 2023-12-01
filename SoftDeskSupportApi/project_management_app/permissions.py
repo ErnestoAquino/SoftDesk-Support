@@ -1,4 +1,5 @@
 from rest_framework.permissions import BasePermission
+from rest_framework.exceptions import PermissionDenied
 
 from project_management_app.exceptions import CustomAPIException
 from project_management_app.models import Project
@@ -43,3 +44,24 @@ class HasProjectAccessPermission (BasePermission):
         return request.user == project.author or request.user in project.contributors.all()
 
 
+class IsIssueAuthor(BasePermission):
+    """
+    Custom permission to only allow authors of an issue to perform specific actions.
+
+    This permission class restricts the ability to delete, update, or partially update an issue
+    to only the author of that issue. It checks if the current user is the author and raises
+    an appropriate error message if they are not.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        # Check if the current user is the author of the issue.
+        if obj.author != request.user:
+            if view.action == "destroy":
+                # If the action is 'destroy' (DELETE), only the author can delete the issue.
+                raise PermissionDenied("Only the author can delete this issue.")
+            elif view.action in ["update", "partial_update"]:
+                # If the action is 'update' (PUT) or 'partial_update' (PATCH),
+                # only the author can modify the issue.
+                raise PermissionDenied("Only the author can modify this issue.")
+        # If the current user is the author, allow the action.
+        return True
