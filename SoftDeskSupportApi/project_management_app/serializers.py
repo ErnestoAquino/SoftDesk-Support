@@ -20,19 +20,11 @@ class AuthorSerializerMixin(serializers.Serializer):
 
 
 class ProjectListSerializer(ModelSerializer):
-    url = HyperlinkedIdentityField(view_name="projects-detail", read_only = True)
+    url = HyperlinkedIdentityField(view_name="projects-detail", read_only=True)
 
     class Meta:
         model = Project
         fields = ["url", "name", "description", "type"]
-
-
-class ProjectDetailSerializer(AuthorSerializerMixin, ModelSerializer):
-    contributors = CustomUserSerializer(many = True)
-
-    class Meta:
-        model = Project
-        fields = ("id", "name", "description", "type", "created_time", "author", "contributors")
 
 
 class IssueListSerializer(ModelSerializer):
@@ -50,8 +42,17 @@ class IssueListSerializer(ModelSerializer):
         return value
 
 
+class ProjectDetailSerializer(AuthorSerializerMixin, ModelSerializer):
+    contributors = CustomUserSerializer(many=True)
+    issues = IssueListSerializer(many=True)
+
+    class Meta:
+        model = Project
+        fields = ("id", "name", "description", "type", "created_time", "author", "issues", "contributors")
+
+
 class IssueDetailSerializer(AuthorSerializerMixin, ModelSerializer):
-    project = ProjectDetailSerializer(read_only = True)
+    project = ProjectDetailSerializer(read_only=True)
 
     class Meta:
         model = Issue
@@ -67,9 +68,9 @@ class CommentDetailSerializer(AuthorSerializerMixin, ModelSerializer):
 
 
 class CommentListSerializer(ModelSerializer):
-    issue = HyperlinkedRelatedField(view_name = "issues-detail",
-                                    queryset = Issue.objects.all(),
-                                    lookup_field = "pk")
+    issue = HyperlinkedRelatedField(view_name="issues-detail",
+                                    queryset=Issue.objects.all(),
+                                    lookup_field="pk")
 
     class Meta:
         model = Comment
