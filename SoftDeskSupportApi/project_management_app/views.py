@@ -8,6 +8,7 @@ from rest_framework import status
 from project_management_app.permissions import IsAuthor
 from project_management_app.permissions import IsContributor
 from project_management_app.permissions import HasProjectAccessPermission
+from project_management_app.permissions import IsIssueAuthor
 from project_management_app.models import Project
 from project_management_app.models import Issue
 from project_management_app.models import Comment
@@ -80,6 +81,13 @@ class IssueViewSet(ModelViewSet):
         else:
             return super().get_serializer_class()
 
+    def get_permissions(self):
+        permissions = super().get_permissions()
+
+        if self.action in ['destroy', 'update', 'partial_update']:
+            permissions = [IsIssueAuthor()]
+        return permissions
+
     def create(self, request, *args, **kwargs):
         project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
 
@@ -87,7 +95,7 @@ class IssueViewSet(ModelViewSet):
         if request.user != project.author and request.user not in project.contributors.all():
             raise PermissionDenied("Only the author or contributors can create issues.")
 
-        serializer = self.get_serializer(data=request.data, context = {'project': project})
+        serializer = self.get_serializer(data=request.data, context={'project': project})
         serializer.is_valid(raise_exception=True)
         serializer.save(project=project, author=request.user)
 
