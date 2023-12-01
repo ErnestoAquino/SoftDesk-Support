@@ -51,7 +51,7 @@ class CustomUsersViewset(ModelViewSet):
         # If everything is okay, save the instance
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status = status.HTTP_201_CREATED, headers = headers)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class ContributorViewset(ModelViewSet):
@@ -73,7 +73,7 @@ class ContributorViewset(ModelViewSet):
 
         project_id = self.extract_project_id(project_url)
 
-        project = get_object_or_404(Project, id = project_id)
+        project = get_object_or_404(Project, id=project_id)
         user = get_object_or_404(CustomUser, username=username)
 
         contributor = get_object_or_404(Contributor, user=user, project=project)
