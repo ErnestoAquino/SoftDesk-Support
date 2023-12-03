@@ -89,17 +89,43 @@ class IssueViewSet(ModelViewSet):
         return permissions
 
     def create(self, request, *args, **kwargs):
-        project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
+        project = get_object_or_404(Project, pk = self.kwargs['project_pk'])
 
         # Only the author or contributors of the project can create issues
         if request.user != project.author and request.user not in project.contributors.all():
             raise PermissionDenied("Only the author or contributors can create issues.")
 
-        serializer = self.get_serializer(data=request.data, context={'project': project})
-        serializer.is_valid(raise_exception=True)
-        serializer.save(project=project, author=request.user)
+        serializer = self.get_serializer(data = request.data, context = {'project': project})
+        serializer.is_valid(raise_exception = True)
+        serializer.save(project = project, author = request.user)
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status = status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        # Retrieve the associated project using the project ID from the URL
+        project = get_object_or_404(Project, pk = self.kwargs['project_pk'])
+        # Get the specific issue instance to be updated
+        instance = self.get_object()
+
+        # Initialize the serializer for a full update (PUT)
+        serializer = self.get_serializer(instance, data = request.data, context = {'project': project})
+        serializer.is_valid(raise_exception = True)   # Validate the data
+        serializer.save()  # Save the updated instance
+
+        return Response(serializer.data)  # Return the serialized data of the updated instance
+
+    def partial_update(self, request, *args, **kwargs):
+        # Retrieve the associated project using the project ID from the URL
+        project = get_object_or_404(Project, pk = self.kwargs['project_pk'])
+        # Get the specific issue instance to be updated
+        instance = self.get_object()
+
+        # Initialize the serializer for a partial update (PATCH)
+        serializer = self.get_serializer(instance, data = request.data, partial = True, context = {'project': project})
+        serializer.is_valid(raise_exception = True)   # Validate the data
+        serializer.save()  # Save the updated instance
+
+        return Response(serializer.data)
 
 
 class CommentViewSet(BaseViewSet):
