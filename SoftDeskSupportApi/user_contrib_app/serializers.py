@@ -34,21 +34,9 @@ class CustomUserSerializer(ModelSerializer):
 
 class ContributorSerializer(ModelSerializer):
 
-    # user = PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
     user = SlugRelatedField(slug_field="username", queryset=CustomUser.objects.all())
-    # project = PrimaryKeyRelatedField(queryset=Project.objects.all())
-    project = HyperlinkedRelatedField(view_name="projects-detail",
-                                      queryset=Project.objects.all(),
-                                      lookup_field="pk")
+    project = PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Contributor
         fields = ["user", "project"]
-
-    # def validate(self, data):
-    #     # Check if a Contributor with the same user and project already exists
-    #     if Contributor.objects.filter(user=data["user"], project=data["project"]).exists():
-    #         raise ValidationError({
-    #             "non_field_errors": ["This user is already a contributor to this project."]
-    #         })
-    #     return data
