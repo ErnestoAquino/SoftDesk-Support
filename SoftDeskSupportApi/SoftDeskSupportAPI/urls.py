@@ -36,17 +36,20 @@ router.register("projects", ProjectViewSet, basename="projects")
 router.register("issues", IssueViewSet, basename="issues")
 router.register("comments", CommentViewSet, basename="comments")
 
-
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api-auth/", include('rest_framework.urls')),
     path("api/token/", TokenObtainPairView.as_view()),
     path("api/token/refresh/", TokenRefreshView.as_view()),
     path("api/", include(router.urls)),
+
     path("api/projects/<int:project_pk>/issues/",
          IssueViewSet.as_view({"get": "list", "post": "create"}),
          name="issue-list"),
     path("api/projects/<int:project_pk>/issues/<int:pk>/",
          IssueViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy", "patch": "partial_update"}),
          name="issue-detail"),
+
+    path("api/projects/<int:project_pk>/contributors/",
+         ContributorViewset.as_view({"get": "list", "post": "create", "delete": "destroy"}))
 ]
