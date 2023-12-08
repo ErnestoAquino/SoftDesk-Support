@@ -51,5 +51,13 @@ urlpatterns = [
          name="issue-detail"),
 
     path("api/projects/<int:project_pk>/contributors/",
-         ContributorViewset.as_view({"get": "list", "post": "create", "delete": "destroy"}))
+         ContributorViewset.as_view({"get": "list", "post": "create", "delete": "destroy"})),
+
+    path("api/projects/<int:project_pk>/issues/<int:issue_pk>/comments/",
+         CommentViewSet.as_view({"get": "list", "post": "create"}),
+         name="comment-list"),
+
+    path("api/projects/<int:project_pk>/issues/<int:issue_pk>/comments/<uuid:pk>/",
+         CommentViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy", "patch": "partial_update"}),
+         name="comment-detail")
 ]
