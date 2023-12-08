@@ -22,7 +22,8 @@ class CustomUsersViewset(ModelViewSet):
     serializer_class = CustomUserSerializer
 
     def get_queryset(self):
-        return CustomUser.objects.all()
+        # Filter users based on their preference to share data
+        return CustomUser.objects.filter(can_data_be_shared=True)
 
     def get_permissions(self):
         # Check if the current action is 'create'
