@@ -1,10 +1,13 @@
 from rest_framework.relations import HyperlinkedRelatedField
 from rest_framework.serializers import ModelSerializer
 from rest_framework.serializers import HyperlinkedIdentityField
+from rest_framework.serializers import SlugRelatedField
+from rest_framework.serializers import CharField
 from rest_framework import serializers
 from project_management_app.models import Project
 from project_management_app.models import Issue
 from project_management_app.models import Comment
+from project_management_app.models import CustomUser
 from user_contrib_app.serializers import CustomUserSerializer
 
 
@@ -28,6 +31,11 @@ class ProjectListSerializer(ModelSerializer):
 
 
 class IssueListSerializer(ModelSerializer):
+    assignee = SlugRelatedField(slug_field="username",
+                                queryset=CustomUser.objects.all(),
+                                required=False,
+                                allow_null=True)
+
     class Meta:
         model = Issue
         fields = ["id", "title", "description", "status", "priority", "tag", "assignee"]
@@ -35,6 +43,8 @@ class IssueListSerializer(ModelSerializer):
     def validate_assignee(self, value):
         # Retrieve the project from the context
         project = self.context.get("project")
+        if not project:
+            raise serializers.ValidationError("Project context is missing.")
 
         # Check if the assignee is a contributor of the project
         if value and value not in project.contributors.all():
@@ -43,35 +53,44 @@ class IssueListSerializer(ModelSerializer):
 
 
 class ProjectDetailSerializer(AuthorSerializerMixin, ModelSerializer):
-    contributors = CustomUserSerializer(many=True)
-    issues = IssueListSerializer(many=True)
+    author_username = CharField(source='author.username', read_only=True)
+    issues = SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='title'
+    )
+    contributors = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='username'
+    )
 
     class Meta:
         model = Project
-        fields = ("id", "name", "description", "type", "created_time", "author", "issues", "contributors")
+        fields = ("id", "name", "description", "type", "created_time", "author_username", "issues", "contributors")
 
 
 class IssueDetailSerializer(AuthorSerializerMixin, ModelSerializer):
-    project = ProjectDetailSerializer(read_only=True)
+    project = serializers.SlugRelatedField(slug_field='name', read_only=True)
+    assignee = serializers.SlugRelatedField(slug_field='username', read_only=True)
+    author = serializers.SlugRelatedField(slug_field='username', read_only=True)
 
     class Meta:
         model = Issue
         fields = ("id", "title", "description", "status", "priority", "tag", "project", "assignee", "author")
 
 
-class CommentDetailSerializer(AuthorSerializerMixin, ModelSerializer):
-    issue = IssueDetailSerializer()
+class CommentDetailSerializer(ModelSerializer):
+    author_username = serializers.CharField(source="author.username", read_only=True)
+    created_time = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
 
     class Meta:
         model = Comment
-        fields = ["id", "description", "author", "issue"]
+        fields = ["id", "description", "author_username", "created_time"]
 
 
 class CommentListSerializer(ModelSerializer):
-    issue = HyperlinkedRelatedField(view_name="issues-detail",
-                                    queryset=Issue.objects.all(),
-                                    lookup_field="pk")
 
     class Meta:
         model = Comment
-        fields = ["id", "description", "author", "issue"]
+        fields = ["id", "description"]
