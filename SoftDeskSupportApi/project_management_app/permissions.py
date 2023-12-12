@@ -1,4 +1,4 @@
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.permissions import BasePermission
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.exceptions import NotFound
 
@@ -7,7 +7,10 @@ from project_management_app.models import Issue
 
 
 class IsProjectAuthor(BasePermission):
-    """Permission to allow only the author to modify or delete an object."""
+    """
+    Permission to allow only the author to modify or delete an object.
+    This method verifies if the user attempting to modify or delete the object is its author.
+    """
     def has_object_permission(self, request, view, obj):
         if not request.user == obj.author:
             raise PermissionDenied("Only the author can modify or delete this project.")
@@ -16,7 +19,9 @@ class IsProjectAuthor(BasePermission):
 
 class IsProjectContributor(BasePermission):
     """
-    Custom permission to check if the user is either the author or a contributor of the project.
+    Permission to check if the user is either the author or a contributor of the project.
+    This permission checks whether the user is the author or a contributor of the project
+    and grants access accordingly
     """
 
     def has_object_permission(self, request, view, obj):
@@ -36,11 +41,9 @@ class IsProjectContributor(BasePermission):
 
 class HasProjectAccessPermission (BasePermission):
     """
-    Custom permission to check if the user has access to a specific project.
-
-    This permission class ensures that only the author of a project or its contributors
-    have access to the project's resources. It checks the project against the user's
-    role (author or contributor) and grants or denies permission based on this relationship.
+    Restricts project access to its author or contributors.
+    his permission checks if the user is either the author or a contributor of the project.
+    It retrieves the project_pk from the URL to identify the project.
     """
     def has_permission(self, request, view):
         # Retrieve the project_pk from the URL
@@ -50,20 +53,27 @@ class HasProjectAccessPermission (BasePermission):
         try:
             project = Project.objects.get(pk=project_pk)
         except Project.DoesNotExist:
-            # If the project doesn't exist, deny access
-            return False
+            # Raise a NotFound error if the project does not exist
+            raise NotFound("Project not found")
 
-        # Check if the requesting user is either the author or a contributor of the project
-        return request.user == project.author or request.user in project.contributors.all()
+        # Determine if the user is the author or a contributor of the project
+        is_author = request.user == project.author
+        is_contributor = request.user in project.contributors.all()
+
+        if is_author or is_contributor:
+            return True
+
+        if view.action in ['list', 'retrieve']:
+            raise PermissionDenied("Only contributors of the project can access its resources.")
+        if view.action == 'create':
+            raise PermissionDenied("You cannot create issues for a project you are not contributing to.")
+        return False
 
 
 class IsIssueAuthor(BasePermission):
     """
-    Custom permission to only allow authors of an issue to perform specific actions.
-
-    This permission class restricts the ability to delete, update, or partially update an issue
-    to only the author of that issue. It checks if the current user is the author and raises
-    an appropriate error message if they are not.
+    Permission to only allow authors of an issue to perform specific actions.
+    delete, update, partial_update.
     """
 
     def has_object_permission(self, request, view, obj):
@@ -82,7 +92,7 @@ class IsIssueAuthor(BasePermission):
 
 class IsContributorToProjectOfIssue(BasePermission):
     """
-    Custom permission to check if the user is a contributor to the project of the issue.
+    Permission to check if the user is a contributor to the project of the issue.
     """
 
     def has_permission(self, request, view):
@@ -93,7 +103,7 @@ class IsContributorToProjectOfIssue(BasePermission):
             # Retrieve the issue and its related project
             issue = Issue.objects.get(pk=issue_pk)
         except Issue.DoesNotExist:
-            raise NotFound(detail="The requested resource is not available or does exist.")
+            raise NotFound(detail="The requested resource is not available or does not exist")
 
         # Check if the user is a contributor to the project
         is_contributor = issue.project.contributors.filter(pk=request.user.pk).exists()
@@ -101,22 +111,19 @@ class IsContributorToProjectOfIssue(BasePermission):
         if not is_contributor:
             if view.action == "create":
                 # Custom message for trying to add a comment without being a contributor
-                raise PermissionDenied(detail="You cannot add comments to a project to which "
-                                              "you are not a contributor.")
+                raise PermissionDenied(detail="You cannot add comments to a project unless you "
+                                              "are a contributor.")
             else:
                 # General message for other actions.
-                raise PermissionDenied(detail="Only the contributors of the project can access its resources.")
+                raise PermissionDenied(detail="Only the contributors of the project can access "
+                                              "its resources.")
 
         return True
 
 
 class IsCommentAuthor(BasePermission):
     """
-    Custom permission to check if the user is the author of the comment.
-
-    This permission class restricts the ability to delete, update, or partially update a comment
-    to only the author of that comment. It verifies if the current user is the author and raises
-    an appropriate error message if they are not.
+    Permission to check if the user is the author of the comment.
     """
 
     def has_object_permission(self, request, view, obj):
@@ -126,8 +133,7 @@ class IsCommentAuthor(BasePermission):
                 # If the action is 'destroy' (DELETE), only the author can delete the comment.
                 raise PermissionDenied(detail="Only the author can delete this comment.")
             elif view.action in ["update", "partial_update"]:
-                # If the action id 'update' (PUT) or 'partial_update' only the author can modify the comment.
+                # If the action is 'update' (PUT) or 'partial_update' only the author can modify the comment.
                 raise PermissionDenied(detail="Only the author can modify this comment.")
         # If the current user is the author, permit the action
         return True
-
