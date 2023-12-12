@@ -9,10 +9,7 @@ from project_management_app.models import Project
 
 class UserProfilePermission(BasePermission):
     """
-    Custom permission object that restricts users to only accessing and modifying their own profile data.
-
-    This permission ensures that a user can perform read operations (GET, HEAD, OPTIONS) only on their own
-    profile and restricts write operations (POST, PUT, PATCH, DELETE) to their own profile as well.
+    Permission that restricts users to only accessing and modifying their own profile data.
     """
     def has_object_permission(self, request, view, obj):
         # Check if the request method is one of the safe methods (GET, HEAD, OPTIONS).
@@ -35,12 +32,7 @@ class UserProfilePermission(BasePermission):
 
 class IsProjectContributor(BasePermission):
     """
-        Custom permission to check if the requesting user is a contributor of the specified project.
-
-        This permission ensures that the user is part of the contributors of the project for which the request is
-        being made. It allows access to the project's resources only if the user is a verified contributor of that
-        project. If the user is not a contributor, a specific error message is raised to inform them of the access
-        restriction.
+    Permission to check if the requesting user is a contributor of the specified project.
     """
     def has_permission(self, request, view):
         # Extract the project ID from the URL parameters.
@@ -60,12 +52,7 @@ class IsProjectContributor(BasePermission):
 
 class IsProjectAuthor(BasePermission):
     """
-    Custom permission to check if the requesting user is the author of the specified project.
-
-    This permission is crucial for actions that require the user to be the creator of the project.
-    It restricts certain operations, such as adding or deleting project contributors, to only the user who
-    has authored the project. Custom error messages are provided to inform users when they attempt to perform
-    unauthorized actions.
+    Permission to check if the requesting user is the author of the specified project.
     """
     def has_permission(self, request, view):
         # Extract the project ID from the URL parameters.
