@@ -37,79 +37,108 @@ class BaseViewSet(ModelViewSet):
             return super().get_serializer_class()
 
 
-class ProjectViewSet(ModelViewSet):
+class ProjectViewSet(BaseViewSet):
+    """
+    Manages CRUD operations for projects in the application.
+
+    Utilizes two serializers: one for listing projects and another for project details.
+    Enables users to list, view details, create, update, and delete projects.
+    """
     serializer_class = ProjectListSerializer
     detail_serializer_class = ProjectDetailSerializer
 
     def get_permissions(self):
+        """
+        Assigns permissions based on the action. Only the author of the project can modify or delete it.
+        """
         permission_classes = [IsAuthenticated]
 
+        # Only the author of the project can update or delete
         if self.action in ['update', 'partial_update', 'destroy']:
             permission_classes.append(IsProjectAuthor)
         if self.action in ['retrieve', 'list']:
             permission_classes.append(IsProjectContributor)
         permission_instances = []
+
+        # Instantiate and return the permissions
         for permission in permission_classes:
             permission_instances.append(permission())
         return permission_instances
 
     def get_queryset(self):
+        """
+        Returns a queryset containing all projects.
+        """
         return Project.objects.all()
 
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return self.detail_serializer_class
-        else:
-            return super().get_serializer_class()
-
     def perform_create(self, serializer):
+        """
+        Creates a new project. Automatically sets the user making the request as the author
+        and contributor of the project.
+        """
+        # Save the project with the current user as the author
         project = serializer.save(author=self.request.user)
+        # Automatically add the author as a contributor
         Contributor.objects.create(user=self.request.user, project=project)
+        # Return the data of the created project
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class IssueViewSet(ModelViewSet):
+class IssueViewSet(BaseViewSet):
+    """
+    Manages CRUD operations for issues associated with projects in the application.
+    """
     serializer_class = IssueListSerializer
     detail_serializer_class = IssueDetailSerializer
-    permission_classes = [IsAuthenticated, HasProjectAccessPermission]
 
     def get_queryset(self):
+        """
+        Returns a queryset of issues for a specific project identified by `project_pk`.
+        """
         project_pk = self.kwargs['project_pk']
         return Issue.objects.filter(project_id=project_pk)
 
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return self.detail_serializer_class
-        else:
-            return super().get_serializer_class()
-
     def get_permissions(self):
-        permissions = super().get_permissions()
+        """
+        Assigns custom permissions based on the action being performed.
+        """
+        permissions_classes = [IsAuthenticated]
 
+        if self.action in ['list', 'retrieve', 'create']:
+            permissions_classes.append(HasProjectAccessPermission)
+        # Only the author of the issue can update or delete
         if self.action in ['destroy', 'update', 'partial_update']:
-            permissions = [IsIssueAuthor()]
-        return permissions
+            permissions_classes.append(IsIssueAuthor)
+        return [permission() for permission in permissions_classes]
 
     def create(self, request, *args, **kwargs):
+        """
+        Creates a new issue for a project. Only authors or contributors of the project can create issues.
+        """
         project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
 
-        # Only the author or contributors of the project can create issues
+        # Restrict issue creation to project's author or contributors
         if request.user != project.author and request.user not in project.contributors.all():
             raise PermissionDenied("Only the author or contributors can create issues.")
 
+        # Validate and save the issue
         serializer = self.get_serializer(data=request.data, context={'project': project})
         serializer.is_valid(raise_exception=True)
         serializer.save(project=project, author=request.user)
 
+        # Return the serialized data of the newly created issue
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
+        """
+        Updates an issue. Retrieves the associated project and the specific issue instance to be updated.
+        """
         # Retrieve the associated project using the project ID from the URL
         project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
         # Get the specific issue instance to be updated
         instance = self.get_object()
 
-        # Initialize the serializer for a full update (PUT)
+        # Initialize and validate the serializer for a full update
         serializer = self.get_serializer(instance, data=request.data, context={'project': project})
         serializer.is_valid(raise_exception=True)  # Validate the data
         serializer.save()  # Save the updated instance
@@ -117,12 +146,16 @@ class IssueViewSet(ModelViewSet):
         return Response(serializer.data)  # Return the serialized data of the updated instance
 
     def partial_update(self, request, *args, **kwargs):
+        """
+        Partially updates an issue. Retrieves the associated project and the specific issue instance to be updated.
+        """
+
         # Retrieve the associated project using the project ID from the URL
         project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
         # Get the specific issue instance to be updated
         instance = self.get_object()
 
-        # Initialize the serializer for a partial update (PATCH)
+        # Initialize and validate the serializer for a partial update
         serializer = self.get_serializer(instance, data=request.data, partial=True, context={'project': project})
         serializer.is_valid(raise_exception=True)  # Validate the data
         serializer.save()  # Save the updated instance
@@ -130,7 +163,7 @@ class IssueViewSet(ModelViewSet):
         return Response(serializer.data)
 
 
-class CommentViewSet(ModelViewSet):
+class CommentViewSet(BaseViewSet):
     serializer_class = CommentListSerializer
     detail_serializer_class = CommentDetailSerializer
 
