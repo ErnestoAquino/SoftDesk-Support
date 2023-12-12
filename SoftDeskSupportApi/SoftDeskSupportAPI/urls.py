@@ -31,10 +31,7 @@ from project_management_app.views import CommentViewSet
 router = routers.SimpleRouter()
 
 router.register("users", CustomUsersViewset, basename="users")
-router.register('contributors', ContributorViewset, basename="contributors")
 router.register("projects", ProjectViewSet, basename="projects")
-router.register("issues", IssueViewSet, basename="issues")
-router.register("comments", CommentViewSet, basename="comments")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
