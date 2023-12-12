@@ -1,9 +1,7 @@
-import re
+from django.http import Http404
 from rest_framework import status
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
-# from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -51,6 +49,21 @@ class CustomUsersViewset(ModelViewSet):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def destroy(self, request, pk=None, *args, **kwargs):
+        """
+        Allows a user to delete their own account.
+        """
+        try:
+            # Retrieve the user object
+            user = CustomUser.objects.get(pk=pk)
+
+            # Delete the user. Permissions have already been checked.
+            user.delete()
+            return Response(status = status.HTTP_204_NO_CONTENT)
+        except CustomUser.DoesNotExist:
+            # Raise a 404 error if the user does not exist
+            raise Http404("User not found")
 
 
 class ContributorViewset(ModelViewSet):
