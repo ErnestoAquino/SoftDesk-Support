@@ -9,9 +9,8 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
 from user_contrib_app.permissions import UserProfilePermission
+from user_contrib_app.permissions import IsProjectContributor
 from user_contrib_app.permissions import IsProjectAuthor
-from user_contrib_app.permissions import IsProjectAuthorTest
-from user_contrib_app.permissions import IsProjectAuthorForDelete
 from user_contrib_app.models import CustomUser
 from user_contrib_app.models import Contributor
 from user_contrib_app.serializers import CustomUserSerializer
@@ -20,11 +19,11 @@ from project_management_app.models import Project
 
 
 class CustomUsersViewset(ModelViewSet):
-
     serializer_class = CustomUserSerializer
 
     def get_queryset(self):
-        return CustomUser.objects.all()
+        # Filter users based on their preference to share data
+        return CustomUser.objects.filter(can_data_be_shared=True)
 
     def get_permissions(self):
         # Check if the current action is 'create'
@@ -51,42 +50,48 @@ class CustomUsersViewset(ModelViewSet):
         # If everything is okay, save the instance
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status = status.HTTP_201_CREATED, headers = headers)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class ContributorViewset(ModelViewSet):
     serializer_class = ContributorSerializer
-    queryset = Contributor.objects.all()
-    # http_method_names = ['post', 'head', 'options', 'delete']
-    # permission_classes = [IsAuthenticated, IsProjectAuthorTest, IsProjectAuthorForDelete]
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        permissions_classes = [IsAuthenticated, IsProjectContributor]
+
+        if self.action in ["create", "destroy"]:
+            permissions_classes.append(IsProjectAuthor)
+        return [permission() for permission in permissions_classes]
+
+    def get_queryset(self):
+        project_pk = self.kwargs.get("project_pk")
+        return Contributor.objects.filter(project_id=project_pk)
 
     def create(self, request, *args, **kwargs):
+        # Extract the project ID from the URL
+        project_pk = self.kwargs.get("project_pk")
+        project = get_object_or_404(Project, pk=project_pk)
+
+        # Create a new instance of Contributor with the provided data
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+
+        # Save the new contributor, associating it with the project and the user.
+        serializer.save(project=project)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        project_url = request.query_params.get('project_url')
-        username = request.query_params.get('username')
+        # Extract the project ID from the URL
+        project_pk = self.kwargs.get("project_pk")
 
-        project_id = self.extract_project_id(project_url)
+        username = request.data.get("username")
 
-        project = get_object_or_404(Project, id = project_id)
+        # Get instances of Project and CustomUser
+        project = get_object_or_404(Project, pk=project_pk)
         user = get_object_or_404(CustomUser, username=username)
 
+        # Find and delete the contributor
         contributor = get_object_or_404(Contributor, user=user, project=project)
         contributor.delete()
 
-        return Response(status = status.HTTP_204_NO_CONTENT)
-
-    def extract_project_id(self, url):
-        # regular expression to extract the project ID from the URL.
-        match = re.search(r'api/projects/(\d+)/$', url)
-        if match:
-            # Extract the project ID from the URL.
-            return match.group(1)
-        else:
-            # If a valid ID is not found in the URL, raise an exception.
-            raise PermissionDenied("Invalid project URL.")
+        return Response(status=status.HTTP_204_NO_CONTENT)

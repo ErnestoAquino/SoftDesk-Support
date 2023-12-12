@@ -13,7 +13,7 @@ class ProjectAdmin(admin.ModelAdmin):
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
     # Columns to be displayed in the issue listing.
-    list_display = ('title', 'description', 'status', 'priority', 'tag', 'created_time')
+    list_display = ('id', 'title', 'description', 'status', 'priority', 'tag', 'created_time')
 
 
 @admin.register(Comment)

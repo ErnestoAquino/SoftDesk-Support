@@ -9,15 +9,19 @@ from project_management_app.models import Project
 
 class UserProfilePermission(BasePermission):
     """
-    Custom permission object that only allows users to edit their own data.
+    Permission that restricts users to only accessing and modifying their own profile data.
     """
     def has_object_permission(self, request, view, obj):
-        # Reading is allowed for any request,
-        # thus GET, HEAD, or OPTIONS requests are allowed.
+        # Check if the request method is one of the safe methods (GET, HEAD, OPTIONS).
+        # Safe methods are read operations that do not alter data.
         if request.method in SAFE_METHODS:
+            # If the user making the request is not the same as the object (profile), deny access.
+            if obj != request.user:
+                raise PermissionDenied("You cannot access a profile that is not your own.")
             return True
 
-        # Writing is only allowed if the user making the request is the same as the object.
+        # For write operations (POST, PUT, PATCH, DELETE), ensure that the user making the request
+        # is the same as the object (profile). If not, deny the appropriate operation with a custom message.
         if obj != request.user:
             if request.method == "DELETE":
                 raise PermissionDenied("You cannot delete a user who is not you.")
@@ -26,90 +30,45 @@ class UserProfilePermission(BasePermission):
         return True
 
 
+class IsProjectContributor(BasePermission):
+    """
+    Permission to check if the requesting user is a contributor of the specified project.
+    """
+    def has_permission(self, request, view):
+        # Extract the project ID from the URL parameters.
+        project_pk = view.kwargs.get("project_pk")
+        # Retrieve the project instance.
+        project = Project.objects.filter(pk=project_pk).first()
+
+        if not project:
+            return False
+
+        if request.user not in project.contributors.all():
+            # Custom error message if the user is not a contributor of the project
+            raise PermissionDenied("Only project contributors can access this information.")
+
+        return True
+
+
 class IsProjectAuthor(BasePermission):
     """
-    Permission to allow only the author of a project to add or remove a contributor.
-    """
-
-    def has_permission(self, request, view):
-        # Retrieve the project ID from the request data.
-        project_id = request.data.get("project")
-
-        # If no project_id is provided, deny permission with a message.
-        if not project_id:
-            raise PermissionDenied("Project ID is required.")
-
-        # Try to fetch the project with the given ID.
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            # If the project does not exist, deny permission with a message.
-            raise PermissionDenied("Project does not exist.")
-
-        # Check if the user making the request is the author of the project.
-        if project.author != request.user:
-            # If the user is not the author, deny permission with a message.
-            raise PermissionDenied("You do not have permission to add contributors to this project.")
-        # If all checks pass, grant permission.
-        return True
-
-
-class IsProjectAuthorTest(BasePermission):
-    def has_permission(self, request, view):
-
-        if request.method == "DELETE":
-            project_url = request.query_params.get("project")
-        else:
-            # Retrieve the project URL the request data.
-            project_url = request.data.get("project")
-
-        # If a project URL is not provided, deny permission with a message.
-        if not project_url:
-            raise PermissionDenied("Project URL is required.")
-
-        # Extract the project ID from the URL.
-        project_id = self.extract_project_id(project_url)
-
-        # Try to fetch the project with the given ID.
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            raise PermissionDenied("Project does not exist.")
-
-        # Check if the user making the request is the author of the project.
-        if project.author != request.user:
-            raise PermissionDenied("You do not have to add contributors to this project.")
-
-        return True
-
-    def extract_project_id(self, url):
-        # regular expression to extract the project ID from the URL.
-        match = re.search(r'api/projects/(\d+)/$', url)
-        if match:
-            # Extract the project ID from the URL.
-            return match.group(1)
-        else:
-            # If a valid ID is not found in the URL, raise an exception.
-            raise PermissionDenied("Invalid project URL.")
-
-
-class IsProjectAuthorForDelete(BasePermission):
-    """
-    Permission to allow only the author of a project to delete a contributor.
+    Permission to check if the requesting user is the author of the specified project.
     """
     def has_permission(self, request, view):
-        if request.method != "DELETE":
-            return True
+        # Extract the project ID from the URL parameters.
+        project_pk = view.kwargs.get("project_pk")
+        # Retrieve the project instance.
+        project = Project.objects.filter(pk=project_pk).first()
 
-        project_id = request.query_params.get("project_id")
-        if not project_id:
-            raise PermissionDenied("Project ID is required.")
+        if not project:
+            return False
 
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            raise PermissionDenied("Project does not exist.")
         if project.author != request.user:
-            raise PermissionDenied("You do not have permission to delete contributors from this project.")
+            if request.method == "POST":
+                # Custom error message for trying to add a contributor when not the author
+                raise PermissionDenied("Only the project's author can add a new contributor.")
+            elif request.method == "DELETE":
+                # Custom error message for trying to delete a contributor when not the author
+                raise PermissionDenied("Only the project's author can remove a contributor.")
 
         return True
