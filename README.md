@@ -187,7 +187,7 @@ To remove a contributor, send the username of the person:
 
   ```json
   {
-      "user": "user6"
+      "username": "user6"
   }
   ```
 ---
