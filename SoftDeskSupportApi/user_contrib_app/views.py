@@ -20,8 +20,17 @@ class CustomUsersViewset(ModelViewSet):
     serializer_class = CustomUserSerializer
 
     def get_queryset(self):
-        # Filter users based on their preference to share data
-        return CustomUser.objects.filter(can_data_be_shared=True)
+        if self.action == 'list':
+            # Filter users based on their preference to share data
+            return CustomUser.objects.filter(can_data_be_shared=True)
+        return CustomUser.objects.none()
+
+    def get_object(self):
+        # Retrieve the user object or raise a 404 error if it does not exist
+        user = get_object_or_404(CustomUser, pk=self.kwargs['pk'])
+        # Check permissions for the retrieved user object
+        self.check_object_permissions(self.request, user)
+        return user
 
     def get_permissions(self):
         # Check if the current action is 'create'
@@ -54,16 +63,12 @@ class CustomUsersViewset(ModelViewSet):
         """
         Allows a user to delete their own account.
         """
-        try:
-            # Retrieve the user object
-            user = CustomUser.objects.get(pk=pk)
+        user = get_object_or_404(CustomUser, pk=pk)
+        # Check permissions for the user
+        self.check_object_permissions(request, user)
 
-            # Delete the user. Permissions have already been checked.
-            user.delete()
-            return Response(status = status.HTTP_204_NO_CONTENT)
-        except CustomUser.DoesNotExist:
-            # Raise a 404 error if the user does not exist
-            raise Http404("User not found")
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ContributorViewset(ModelViewSet):
