@@ -23,7 +23,7 @@ class UserProfilePermission(BasePermission):
         # For write operations (POST, PUT, PATCH, DELETE), ensure that the user making the request
         # is the same as the object (profile). If not, deny the appropriate operation with a custom message.
         if obj != request.user:
-            if request.method == "DELETE":
+            if view.action == 'destroy':
                 raise PermissionDenied("You cannot delete a user who is not you.")
             else:
                 raise PermissionDenied("You cannot modify a user who is not you.")
